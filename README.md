@@ -1,19 +1,36 @@
-A simple LFU cache for golang.  Based on the paper [An O(1) algorithm for implementing the LFU cache eviction scheme](http://dhruvbird.com/lfu.pdf).
+
+Modified version of https://github.com/dgrijalva/lfu-go adding Pop functionality. 
+
+Can be useful to use it for top counters like top N frequently used something.
 
 Usage:
 
 ```go
-import "github.com/dgrijalva/lfu-go"
+import "github.com/basilboli/lfu-go"
 
 // Make a new thing
 c := lfu.New()
 
 // Set some values
-c.Set("myKey", myValue)
+for i := 0; i < 10; i++ {
+	c.Set("somekey" + i, myValue)
+}
 
-// Retrieve some values
-myValue = c.Get("myKey")
+for i := 0; i < 5; i++ {
+	c.Set("somekey" + i, myValue)
+}
 
-// Evict some values
-c.Evict(1)
+// Retrieve top N frequently used keys
+	topN := 3
+	values :=  c.Pop(topN)
+	for value := range values {
+		fmt.Println(value.Key, value.Freq)
+	}
+}
+
+// Should print 
+// somekey0, 2
+// somekey1, 2
+// somekey2, 2
+
 ```

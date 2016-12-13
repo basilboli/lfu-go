@@ -8,6 +8,7 @@ import (
 type Eviction struct {
 	Key   string
 	Value interface{}
+	Freq  int
 }
 
 type Cache struct {
@@ -40,6 +41,11 @@ func New() *Cache {
 	c.freqs = list.New()
 	c.lock = new(sync.Mutex)
 	return c
+}
+
+func (c *Cache) Flush() {
+	c.values = make(map[string]*cacheEntry)
+	c.freqs = list.New()
 }
 
 func (c *Cache) Get(key string) interface{} {
@@ -112,6 +118,38 @@ func (c *Cache) evict(count int) int {
 		}
 	}
 	return evicted
+}
+
+func (c *Cache) PopN(count int) []Eviction {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	entries := make([]Eviction, count)
+	var evicted int
+
+	for i := 0; i < count; {
+		if place := c.freqs.Back(); place != nil {
+			for entry, _ := range place.Value.(*listEntry).entries {
+				evictionEntry := Eviction{
+					Key:   entry.key,
+					Value: entry.value,
+					Freq:  place.Value.(*listEntry).freq,
+				}
+				if i < count {
+					if c.EvictionChannel != nil {
+						c.EvictionChannel <- evictionEntry
+					}
+					entries[i] = evictionEntry
+					delete(c.values, entry.key)
+					c.remEntry(place, entry)
+					evicted++
+					c.len--
+					i++
+				}
+			}
+		}
+	}
+	return entries
 }
 
 func (c *Cache) increment(e *cacheEntry) {
