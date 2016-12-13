@@ -66,3 +66,36 @@ func TestEviction(t *testing.T) {
 		t.Error("Incorrect item")
 	}
 }
+
+func TestPopN(t *testing.T) {
+	topN := 3
+	c := New()
+
+	for i := 0; i < 100; i++ {
+		c.Set(fmt.Sprintf("somekey%d", i), "foobar")
+	}
+
+	for i := 0; i < 30; i++ {
+		c.Set("somekey0", "foobar")
+	}
+
+	for i := 0; i < 20; i++ {
+		c.Set("somekey1", "foobar")
+	}
+	for i := 0; i < 10; i++ {
+		c.Set("somekey2", "foobar")
+	}
+
+	values := c.PopN(topN)
+	if len(values) != topN {
+		t.Error("Incorrect top n items")
+	}
+
+	for i, value := range values {
+		got, want := value.Key, fmt.Sprintf("somekey%d", i)
+		if value.Key != fmt.Sprintf("somekey%d", i) {
+			t.Errorf("Incorrect top element. Got: %s, want: %s ", got, want)
+		}
+	}
+
+}
